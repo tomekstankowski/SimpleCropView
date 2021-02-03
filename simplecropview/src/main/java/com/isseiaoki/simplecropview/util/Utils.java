@@ -165,13 +165,30 @@ import static android.graphics.Bitmap.createBitmap;
 
   public static int getExifOrientation(Context context, Uri uri) {
     String authority = uri.getAuthority().toLowerCase();
-    int orientation;
+    int orientation = 0;
     if (authority.endsWith("media")) {
       orientation = getExifRotation(context, uri);
     } else {
-      orientation = getExifRotation(getFileFromUri(context, uri));
+      try {
+        final InputStream is = context.getContentResolver().openInputStream(uri);
+        orientation = getExifRotation(is);
+      } catch (IOException e) {
+        Logger.e("An error occurred while getting the exif data: " + e.getMessage(), e);
+      }
     }
     return orientation;
+  }
+
+  private static int getExifRotation(InputStream inputStream){
+    try {
+      final ExifInterface exif = new ExifInterface(inputStream);
+      return getRotateDegreeFromOrientation(
+              exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
+      );
+    } catch (IOException e) {
+      Logger.e("An error occurred while getting the exif data: " + e.getMessage(), e);
+    }
+    return 0;
   }
 
   public static int getRotateDegreeFromOrientation(int orientation) {
